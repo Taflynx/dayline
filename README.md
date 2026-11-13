@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="preview.png" alt="Dayline: six cities on one painted timeline, over a meadow and an afternoon sky" width="100%">
+  <img src="media/preview.jpg" alt="Dayline on desktop and phone: six cities on one painted timeline at sunset" width="100%">
 </p>
 
 <h1 align="center">Dayline</h1>
@@ -14,6 +14,10 @@
 Dayline lines up your cities on a shared ruler of hours, so finding a time that works in Tel Aviv, London and Los Angeles at once is a single drag. Behind it, a hand-painted landscape follows the real sky: the sun and moon move with the time you are looking at, and the clouds, wind, rain, snow and fog come from the live forecast where you are.
 
 The whole thing is one HTML file with no build step and no dependencies.
+
+<p align="center">
+  <img src="media/day.jpg" alt="The same view at 8:00, 17:00 and 21:00: morning light, a sunset, and a starry night with the moon" width="100%">
+</p>
 
 ## Features
 

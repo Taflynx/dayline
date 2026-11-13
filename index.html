@@ -70,7 +70,8 @@ nav{position:relative;z-index:5;display:flex;align-items:center;gap:6px;padding:
 .credit a{color:inherit;text-decoration:underline;text-underline-offset:2px;text-decoration-thickness:1px}
 .credit a:hover{color:var(--cream)}
 .sheet-foot{flex:none;display:flex;align-items:center;gap:12px;padding-right:10px;border-top:1px solid var(--rule)}
-.sheet-foot .add-row{width:auto;flex:1}
+.sheet-foot .add-row{width:auto;flex:1;white-space:nowrap;min-width:0}
+.ctl .sm{display:none}
 .controls{display:flex;gap:6px;flex:none}
 .ctl{height:28px;padding:0 11px;border-radius:6px;background:var(--ink);color:var(--cream);font-size:10.5px;white-space:nowrap}
 .ctl:hover{background:#2B261D}
@@ -182,6 +183,8 @@ dialog::backdrop{background:rgba(23,20,15,.55)}
   .loc span{display:none}
   .ctl{height:30px;padding:0 10px;font-size:10.5px}
   .sheet-foot .add-row{padding:0 12px}
+  .ctl .lg{display:none}
+  .ctl .sm{display:inline}
   :root{--label-w:auto}
   .card{grid-template-columns:auto minmax(0,1fr) auto;grid-template-areas:"h l a" "s s s"}
   .label{border-right:0;padding:9px 12px 2px}
@@ -222,9 +225,9 @@ dialog::backdrop{background:rgba(23,20,15,.55)}
         <div class="sheet-foot">
           <button class="add-row mono" id="addBtn2"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>Add a place</button>
           <div class="controls">
-            <button class="ctl mono now" id="nowBtn">Back to now</button>
-            <button class="ctl mono" id="minus1">−1 hour</button>
-            <button class="ctl mono" id="plus1">+1 hour</button>
+            <button class="ctl mono now" id="nowBtn" aria-label="Back to now"><span class="lg">Back to now</span><span class="sm">Now</span></button>
+            <button class="ctl mono" id="minus1" aria-label="Back one hour"><span class="lg">−1 hour</span><span class="sm">−1h</span></button>
+            <button class="ctl mono" id="plus1" aria-label="Forward one hour"><span class="lg">+1 hour</span><span class="sm">+1h</span></button>
           </div>
         </div>
       </div>

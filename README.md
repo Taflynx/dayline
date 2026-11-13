@@ -16,13 +16,13 @@ Dayline lines up your cities on a shared ruler of hours, so finding a time that 
 The whole thing is one HTML file with no build step and no dependencies.
 
 <p align="center">
-  <img src="media/day.jpg" alt="The same view at 8:00, 17:00 and 21:00: morning light, a sunset, and a starry night with the moon" width="100%">
+  <img src="media/day.jpg" alt="The same view at 8:00, 16:45 and 21:00: morning light, a sunset, and a starry night with the moon" width="100%">
 </p>
 
 ## Features
 
-- **One timeline for every place.** Drag any strip (with inertia) to move through time, or tap an hour to jump to it. Working hours are marked, midnight shows the date change, and each row shows its offset from home.
-- **Your places, your order.** Add any city in the world, then remove, reorder, rename, or set one as home.
+- **One timeline for every place.** Drag any strip (with inertia) to move through time, or tap an hour to jump to it. The panel footer steps an hour at a time and brings you back to now. Working hours are marked, midnight shows the date change, and each row shows its offset from home.
+- **Your places, your order.** Add any city in the world, then use *Edit* to remove, reorder or rename places, or set one as home.
 - **Knows where you are.** Your city is detected from your IP on the first visit. *Locate me* uses your device's location for a precise fix.
 - **A living background.** The scene is painted on the GPU in brush strokes: grass and flowers sway in the wind, and the weather changes with the forecast as you scrub through the next three days.
 - **A panel you can place.** On desktop, drag the places panel by its top bar to anywhere on screen (or move it with the arrow keys); double-click the bar to dock it again. Its spot is remembered.
@@ -38,7 +38,7 @@ The whole thing is one HTML file with no build step and no dependencies.
 | Time | `Intl.DateTimeFormat` with IANA time zones; no date library |
 | Rendering | WebGL2. A painted stroke field is baked once per resize, then each frame draws the sky, clouds, sun and moon, hills, instanced grass blades, flowers, and rain or snow particles |
 | Weather | [Open-Meteo](https://open-meteo.com/) current and hourly forecast, cached for 30 minutes and interpolated to the time on screen |
-| City search | Open-Meteo geocoding |
+| City search | A built-in list of major cities plus every IANA time zone; Open-Meteo geocoding supplies coordinates for the weather |
 | Location | [ipwho.is](https://ipwho.is/) with [ipapi.co](https://ipapi.co/) as fallback; browser geolocation plus [BigDataCloud](https://www.bigdatacloud.com/) reverse geocoding for *Locate me* |
 
 Browsers without WebGL2 fall back to a CSS gradient sky; everything else keeps working.

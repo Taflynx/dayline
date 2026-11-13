@@ -262,7 +262,7 @@ const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const esc = s => s.replace(/[&<>"]/g, ch => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[ch]));
 function validTz(tz){ try{ new Intl.DateTimeFormat('en', {timeZone: tz}); return true; }catch{ return false; } }
 const GLOBE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>';
-const flagHTML = cc => cc ? `<img class="flag" alt="" loading="lazy" src="https://flagcdn.com/w80/${cc}.png">` : `<span class="flag">${GLOBE}</span>`;
+const flagHTML = cc => /^[a-z]{2}$/.test(cc || '') ? `<img class="flag" alt="" loading="lazy" src="https://flagcdn.com/w80/${cc}.png">` : `<span class="flag">${GLOBE}</span>`;
 
 // ---------- painted sky: [hour, top, middle, horizon] ----------
 const SKY_KEYS = [

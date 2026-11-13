@@ -1,0 +1,1256 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#2E2F5A" id="themeColor">
+<title>Dayline · time zones on one painted timeline</title>
+<meta name="description" content="See the time everywhere you care about on one painted timeline. Drag to plan across time zones; the sky follows the real weather where you are.">
+<link rel="canonical" href="https://taflynx.github.io/dayline/">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Dayline">
+<meta property="og:description" content="See the time everywhere you care about on one painted timeline. Drag to plan across time zones; the sky follows the real weather where you are.">
+<meta property="og:url" content="https://taflynx.github.io/dayline/">
+<meta property="og:image" content="https://taflynx.github.io/dayline/preview.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23FBF6EA'/%3E%3Cpath d='M7 18a9 9 0 0 1 18 0z' fill='%23EE8A3A'/%3E%3Cpath d='M3.5 18h25' stroke='%2317140F' stroke-width='2.4' stroke-linecap='round'/%3E%3Cpath d='M16 21v6' stroke='%23D9562B' stroke-width='2.6' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#17140F;
+  --cream:#FBF6EA;
+  --sand:#EFDDB0;
+  --sand-deep:#E4CC92;
+  --forest:#1E4D3A;
+  --grass:#3F6B2E;
+  --vermilion:#D9562B;
+  --muted:#6B6253;
+  --hero-ink:var(--cream);
+  --s1:#1C2140; --s2:#2E2F5A; --s3:#4A3F6B;
+  --hills:.4;
+  --rule:rgba(23,20,15,.1);
+  --label-w:280px;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--sand);color:var(--ink);font-family:"Instrument Sans",ui-sans-serif,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit;cursor:pointer;border:0;background:none;padding:0}
+:focus-visible{outline:2px solid var(--vermilion);outline-offset:2px;border-radius:6px}
+.num{font-variant-numeric:tabular-nums}
+.mono{font-family:"JetBrains Mono",ui-monospace,monospace;text-transform:uppercase;letter-spacing:.06em}
+.display{font-family:Anton,Impact,sans-serif;text-transform:uppercase;font-weight:400}
+
+/* ---------- hero: a painting, rendered on the GPU ---------- */
+html,body{height:100%;overflow:hidden;background:#1C2140}
+.hero{position:relative;height:100vh;height:100dvh;overflow:hidden;color:var(--hero-ink);display:flex;flex-direction:column;transition:color .4s}
+body.day{--hero-ink:var(--ink)}
+.sky{position:absolute;inset:0;background:linear-gradient(180deg,var(--s1) 0%,var(--s2) 42%,var(--s3) 70%,var(--s3) 100%)}
+#scene{position:absolute;inset:0;width:100%;height:100%;display:block}
+
+nav{position:relative;z-index:5;display:flex;align-items:center;gap:6px;padding:18px 32px;width:100%;flex:none}
+.brand{display:flex;align-items:center;gap:9px;margin-right:auto;font-weight:700;font-size:23px;letter-spacing:-.04em}
+.brand .mark{width:44px;height:32px;flex:none;margin-top:-4px}
+.nav-link{font-size:13px;padding:10px 12px;border-radius:6px}
+.nav-link:hover{background:rgba(255,255,255,.18)}
+.nav-link.on{text-decoration:underline;text-underline-offset:4px;text-decoration-thickness:2px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:9px;white-space:nowrap;flex:none;background:var(--ink);color:var(--cream);font-family:Anton,Impact,sans-serif;text-transform:uppercase;font-size:17px;letter-spacing:.02em;height:46px;padding:0 20px;border-radius:7px;transition:transform .1s}
+.btn:hover{background:#2B261D}
+.btn:active{transform:translateY(1px)}
+.btn svg{width:18px;height:18px}
+
+.stage{position:relative;z-index:4;flex:1;min-height:0;display:flex;flex-direction:column;justify-content:space-between;gap:24px;padding:0 32px 24px}
+.hero-body{flex:none;padding-top:clamp(4px,2.5vh,36px);min-width:0;max-width:640px}
+.big-time{font-size:clamp(88px,13vw,200px);line-height:.88;letter-spacing:-.01em;margin:0}
+.big-time small{font-size:.32em;margin-left:.12em;letter-spacing:0}
+.where{font-size:clamp(16px,1.6vw,20px);margin:16px 0 0;font-weight:500;max-width:34ch;line-height:1.4}
+.where b{font-weight:700}
+.hint{font-size:11px;margin:18px 0 0;opacity:.75;max-width:40ch;line-height:1.6}
+.credit{font-size:10.5px;margin:10px 0 0;opacity:.6;line-height:1.6}
+.credit a{color:inherit;text-decoration:underline;text-underline-offset:2px;text-decoration-thickness:1px}
+.credit a:hover{opacity:1}
+.controls{display:flex;gap:10px;margin-top:22px;flex-wrap:wrap}
+.ctl{height:40px;padding:0 16px;border-radius:7px;background:var(--ink);color:var(--cream);font-size:13px}
+.ctl:hover{background:#2B261D}
+.ctl.now{background:var(--vermilion);display:none}
+.ctl.now.show{display:inline-block}
+
+.wx{font-size:11.5px;margin:10px 0 0;line-height:1.5}
+.wx:empty{display:none}
+.loc{display:inline-flex;align-items:center;gap:7px}
+.loc svg{width:15px;height:15px;flex:none}
+.loc.busy svg{animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.toast{position:fixed;left:50%;bottom:22px;z-index:60;transform:translate(-50%,16px);background:var(--ink);color:var(--cream);padding:12px 16px;border-radius:8px;font-size:12px;line-height:1.4;opacity:0;pointer-events:none;transition:opacity .25s,transform .25s;max-width:calc(100% - 32px);box-shadow:0 10px 30px rgba(0,0,0,.3)}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+
+/* ---------- places: one precise sheet, rows like a ruler ---------- */
+.panel{color:var(--ink);flex:0 1 auto;min-height:0;width:min(860px,58vw);align-self:flex-end;display:flex;flex-direction:column}
+.sheet{display:flex;flex-direction:column;min-height:0;background:rgba(251,247,238,.74);-webkit-backdrop-filter:blur(18px) saturate(1.15);backdrop-filter:blur(18px) saturate(1.15);border:1px solid rgba(255,255,255,.45);border-radius:12px;box-shadow:0 18px 48px rgba(16,22,12,.28);overflow:hidden}
+#rows{min-height:0;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:rgba(23,20,15,.3) transparent}
+.card{display:grid;grid-template-columns:auto var(--label-w) minmax(0,1fr) auto;grid-template-areas:"h l s a";border-bottom:1px solid var(--rule);position:relative}
+.card.lifting{background:#fff;box-shadow:0 10px 30px rgba(0,0,0,.18);z-index:10}
+.handle{grid-area:h;display:none;align-items:center;padding:0 2px 0 12px;color:var(--muted);cursor:grab;touch-action:none}
+.handle:hover{color:var(--ink)}
+.editing .handle{display:flex}
+.label{grid-area:l;display:grid;grid-template-columns:22px minmax(0,1fr) auto;align-items:center;column-gap:11px;padding:7px 16px;border-right:1px solid var(--rule);min-width:0}
+.flag{width:22px;height:15px;border-radius:2px;object-fit:cover;box-shadow:0 0 0 1px rgba(23,20,15,.18);background:#EEE6D3;display:grid;place-items:center;color:var(--muted)}
+.flag svg{width:12px;height:12px}
+.info{min-width:0}
+.name-line{display:flex;align-items:baseline;gap:8px;min-width:0}
+.name{font-weight:600;font-size:15px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;outline:none}
+.editing .name{background:#fff;border-radius:3px;padding:0 4px;box-shadow:inset 0 0 0 1px var(--ink);cursor:text}
+.home-badge{color:var(--forest)}
+.home-badge::before{content:"";display:inline-block;width:5px;height:5px;border-radius:50%;background:var(--forest);margin-right:5px;vertical-align:1px}
+.sub{font-size:9.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:4px}
+.right{text-align:right}
+.time{font-weight:600;font-size:21px;line-height:1;letter-spacing:-.01em;font-variant-numeric:tabular-nums}
+.time small{font-size:10px;margin-left:2px;letter-spacing:.04em}
+.date{font-size:9.5px;color:var(--muted);margin-top:5px;white-space:nowrap}
+.date .diff{color:var(--ink);margin-left:6px}
+.date .nd,.date .pd{color:var(--vermilion)}
+
+.strip{grid-area:s;position:relative;height:50px;overflow:hidden;cursor:grab;touch-action:pan-y;user-select:none;-webkit-user-select:none}
+.strip:active{cursor:grabbing}
+.strip::after{content:"";position:absolute;left:50%;top:0;bottom:0;width:1.5px;margin-left:-.75px;background:var(--vermilion);pointer-events:none;z-index:3}
+.cells{position:absolute;inset:0}
+.cell{position:absolute;top:0;bottom:0;left:0;font-family:"JetBrains Mono",monospace;font-size:10.5px;color:var(--muted)}
+.cell::before{content:"";position:absolute;left:0;top:24px;height:15px;width:1px;background:rgba(23,20,15,.3)}
+.cell .hl{position:absolute;left:5px;top:9px;line-height:1;white-space:nowrap}
+.cell small{font-size:8px;margin-left:1px}
+.cell .bar{position:absolute;left:0;right:0;top:28px;height:6px;background:var(--g)}
+.cell.work .hl{color:var(--ink)}
+.cell.work::after{content:"";position:absolute;left:0;right:0;top:36px;height:2px;background:var(--forest);opacity:.75}
+.cell.midnight::before{top:6px;height:auto;bottom:6px;background:var(--ink)}
+.cell.midnight .hl{color:var(--ink);font-weight:700;text-transform:uppercase;font-size:9.5px}
+.now-mark{position:absolute;top:6px;bottom:6px;border-left:1px dashed var(--ink);opacity:.5;z-index:2;pointer-events:none}
+
+.actions{grid-area:a;display:none;align-items:center;gap:4px;padding:0 10px}
+.editing .actions{display:flex}
+.icon-btn{width:30px;height:30px;border-radius:6px;display:grid;place-items:center;color:var(--ink);border:1px solid rgba(23,20,15,.35)}
+.icon-btn:hover{background:var(--ink);color:var(--cream)}
+.icon-btn svg{width:15px;height:15px}
+.is-home .set-home{background:var(--forest);border-color:var(--forest);color:var(--cream)}
+.add-row{flex:none;display:flex;align-items:center;gap:8px;width:100%;height:44px;padding:0 16px;font-size:11.5px;color:var(--ink)}
+.add-row:hover{background:rgba(23,20,15,.045)}
+.add-row svg{width:13px;height:13px}
+
+/* ---------- dialog ---------- */
+dialog{border:0;padding:0;background:transparent;color:var(--ink);max-width:520px;width:calc(100% - 32px);margin-top:10vh}
+dialog::backdrop{background:rgba(23,20,15,.55)}
+.dlg{background:var(--cream);border:1.5px solid var(--ink);border-radius:14px;overflow:hidden;box-shadow:0 24px 60px rgba(23,20,15,.4)}
+.dlg-head{display:flex;align-items:center;gap:10px;padding:14px 14px 14px 18px;border-bottom:1.5px solid var(--ink)}
+.dlg-head input{flex:1;border:0;outline:none;background:transparent;font-family:Anton,Impact,sans-serif;text-transform:uppercase;font-size:26px;color:var(--ink);min-width:0}
+.dlg-head input::placeholder{color:#B6AA92}
+.results{max-height:min(56vh,440px);overflow:auto;padding:6px}
+.res{display:flex;align-items:center;gap:12px;width:100%;padding:10px 12px;border-radius:8px;text-align:left}
+.res:hover,.res.sel{background:var(--sand)}
+.res .rn{font-weight:700;font-size:16px}
+.res .rc{font-size:11px;color:var(--muted);margin-top:2px}
+.res .rt{margin-left:auto;text-align:right;font-family:Anton,Impact,sans-serif;font-size:22px;color:var(--forest)}
+.res .rt small{display:block;font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--muted)}
+.empty{padding:26px;text-align:center;color:var(--muted);font-size:14px}
+
+@media (max-width:980px){
+  .stage{gap:14px;padding:0 14px 12px}
+  .panel{width:100%}
+  .panel{max-height:58%;width:100%}
+  .hero-body{padding-top:0}
+  .big-time{font-size:clamp(64px,18vw,120px)}
+  .where{margin-top:8px;font-size:15px}
+  .controls{margin-top:12px}
+  .hint{display:none}
+}
+@media (max-width:640px){
+  nav{padding:12px 14px}
+  .nav-link.hide-sm{display:none}
+  .brand{font-size:20px}
+  .brand .mark{width:36px;height:26px}
+  nav{gap:0}
+  .nav-link{padding:9px 8px}
+  nav .btn{height:36px;padding:0 12px;font-size:14px;margin-left:4px}
+  .loc span{display:none}
+  .ctl{height:34px;padding:0 12px;font-size:12px}
+  :root{--label-w:auto}
+  .card{grid-template-columns:auto minmax(0,1fr) auto;grid-template-areas:"h l a" "s s s"}
+  .label{border-right:0;padding:9px 12px 2px}
+  .strip{height:48px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<header class="hero" id="hero">
+  <div class="sky"></div>
+  <canvas id="scene" aria-hidden="true"></canvas>
+
+  <nav>
+    <div class="brand">
+      <svg class="mark" viewBox="0 0 44 32" aria-hidden="true"><path d="M10 19a12 12 0 0 1 24 0z" fill="#EE8A3A"/><path d="M15.5 19a6.5 6.5 0 0 1 13 0z" fill="#F7B961"/><path d="M3 19h38" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/><path d="M7 23.5v2.5M14.5 23.5v2.5M29.5 23.5v2.5M37 23.5v2.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" opacity=".65"/><path d="M22 22.5v6.5" stroke="#D9562B" stroke-width="2.6" stroke-linecap="round"/></svg>
+      <span>dayline</span>
+    </div>
+    <button class="nav-link mono hide-sm" id="zoomOut" aria-label="Zoom out">−</button>
+    <button class="nav-link mono hide-sm" id="zoomIn" aria-label="Zoom in">+</button>
+    <button class="nav-link mono" id="fmtBtn">24h</button>
+    <button class="nav-link mono loc" id="locBtn" title="Use my location"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.2" fill="currentColor"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg><span>Locate me</span></button>
+    <button class="nav-link mono" id="editBtn">Edit</button>
+    <button class="btn" id="addBtn">Add place</button>
+  </nav>
+
+  <div class="stage">
+    <div class="hero-body">
+      <h1 class="big-time display num" id="whenTime"></h1>
+      <p class="where" id="whenSub"></p>
+      <p class="wx mono" id="wx"></p>
+      <div class="controls">
+        <button class="ctl mono" id="minus1">−1 hour</button>
+        <button class="ctl mono" id="plus1">+1 hour</button>
+        <button class="ctl mono now" id="nowBtn">Back to now</button>
+      </div>
+      <p class="hint mono">Drag any strip · Tap an hour to jump · ← → 15 min · N is now</p>
+      <p class="credit mono">Weather by <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a> · <a href="https://github.com/Taflynx/dayline" target="_blank" rel="noopener">Source on GitHub</a></p>
+    </div>
+    <section class="panel" aria-label="Your places">
+      <div class="sheet">
+        <div id="rows"></div>
+        <button class="add-row mono" id="addBtn2"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>Add a place</button>
+      </div>
+    </section>
+  </div>
+</header>
+
+<div class="toast mono" id="toast" role="status"></div>
+
+<dialog id="addDlg" aria-label="Add a place">
+  <div class="dlg">
+    <div class="dlg-head">
+      <input id="q" placeholder="Search a city" autocomplete="off" spellcheck="false">
+      <button class="icon-btn" id="closeDlg" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+    </div>
+    <div class="results" id="results"></div>
+  </div>
+</dialog>
+
+<template id="rowTpl">
+  <div class="card">
+    <button class="handle" aria-label="Drag to reorder"><svg width="10" height="16" viewBox="0 0 10 16" fill="currentColor"><circle cx="2.5" cy="3" r="1.4"/><circle cx="7.5" cy="3" r="1.4"/><circle cx="2.5" cy="8" r="1.4"/><circle cx="7.5" cy="8" r="1.4"/><circle cx="2.5" cy="13" r="1.4"/><circle cx="7.5" cy="13" r="1.4"/></svg></button>
+    <div class="label">
+      <span class="flag"></span>
+      <div class="info">
+        <div class="name-line"><span class="name"></span></div>
+        <div class="sub mono"></div>
+      </div>
+      <div class="right">
+        <div class="time num"></div>
+        <div class="date mono"></div>
+      </div>
+    </div>
+    <div class="strip"><div class="cells"></div><div class="now-mark"></div></div>
+    <div class="actions">
+      <button class="icon-btn set-home" title="Make this home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3 11.2 12 4l9 7.2V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg></button>
+      <button class="icon-btn del" title="Remove"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg></button>
+    </div>
+  </div>
+</template>
+
+<script>
+const MIN = 60000, H = 3600000, DAY = 86400000;
+const $ = s => document.querySelector(s);
+const pad = n => String(n).padStart(2, '0');
+const uid = () => 'c' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const esc = s => s.replace(/[&<>"]/g, ch => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[ch]));
+function validTz(tz){ try{ new Intl.DateTimeFormat('en', {timeZone: tz}); return true; }catch{ return false; } }
+const GLOBE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>';
+const flagHTML = cc => cc ? `<img class="flag" alt="" loading="lazy" src="https://flagcdn.com/w80/${cc}.png">` : `<span class="flag">${GLOBE}</span>`;
+
+// ---------- painted sky: [hour, top, middle, horizon] ----------
+const SKY_KEYS = [
+  [0,    '#1C2140', '#2E2F5A', '#4A3F6B'],
+  [4.5,  '#22264A', '#3A365F', '#5A4672'],
+  [5.75, '#3F3E72', '#7A5E92', '#C7849C'],
+  [7,    '#8E86C2', '#E9A2B6', '#F7C59A'],
+  [9,    '#A9C4DA', '#CFE0E4', '#F3E6C8'],
+  [13,   '#9DBFD8', '#C8DCE4', '#EEF0E2'],
+  [16.5, '#B4C3DA', '#E3D3C8', '#F6D8A6'],
+  [18.5, '#9C8CC6', '#E59AB0', '#F4A766'],
+  [20,   '#4B4378', '#8A6A9C', '#D98C8C'],
+  [21.5, '#272A50', '#3A3866', '#5A4A78'],
+  [24,   '#1C2140', '#2E2F5A', '#4A3F6B']
+];
+const hex = c => [1, 3, 5].map(i => parseInt(c.slice(i, i + 2), 16));
+function skyAt(hf){ // -> [top, mid, horizon] as rgb arrays
+  hf = ((hf % 24) + 24) % 24;
+  let i = 0; while (SKY_KEYS[i + 1][0] < hf) i++;
+  const a = SKY_KEYS[i], b = SKY_KEYS[i + 1], f = (hf - a[0]) / (b[0] - a[0]);
+  return [1, 2, 3].map(k => { const x = hex(a[k]), y = hex(b[k]); return x.map((v, j) => Math.round(v + (y[j] - v) * f)); });
+}
+const rgb = c => `rgb(${c.join(',')})`;
+const lum = c => (0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]) / 255;
+// the strip of each card is painted with the same sky, hour by hour
+const STRIP = Array.from({length: 25}, (_, h) => skyAt(h)[1]);
+
+// ---------- catalog: name | country | ISO code | zone ----------
+const CITY_DATA = `
+Jerusalem|Israel|il|Asia/Jerusalem
+Tel Aviv|Israel|il|Asia/Jerusalem
+Haifa|Israel|il|Asia/Jerusalem
+London|United Kingdom|gb|Europe/London
+Dublin|Ireland|ie|Europe/Dublin
+Lisbon|Portugal|pt|Europe/Lisbon
+Paris|France|fr|Europe/Paris
+Berlin|Germany|de|Europe/Berlin
+Munich|Germany|de|Europe/Berlin
+Amsterdam|Netherlands|nl|Europe/Amsterdam
+Brussels|Belgium|be|Europe/Brussels
+Madrid|Spain|es|Europe/Madrid
+Barcelona|Spain|es|Europe/Madrid
+Rome|Italy|it|Europe/Rome
+Milan|Italy|it|Europe/Rome
+Zurich|Switzerland|ch|Europe/Zurich
+Vienna|Austria|at|Europe/Vienna
+Prague|Czechia|cz|Europe/Prague
+Budapest|Hungary|hu|Europe/Budapest
+Warsaw|Poland|pl|Europe/Warsaw
+Athens|Greece|gr|Europe/Athens
+Bucharest|Romania|ro|Europe/Bucharest
+Kyiv|Ukraine|ua|Europe/Kyiv
+Moscow|Russia|ru|Europe/Moscow
+Istanbul|Turkey|tr|Europe/Istanbul
+Stockholm|Sweden|se|Europe/Stockholm
+Oslo|Norway|no|Europe/Oslo
+Copenhagen|Denmark|dk|Europe/Copenhagen
+Helsinki|Finland|fi|Europe/Helsinki
+Reykjavik|Iceland|is|Atlantic/Reykjavik
+Larnaca|Cyprus|cy|Asia/Nicosia
+Cairo|Egypt|eg|Africa/Cairo
+Amman|Jordan|jo|Asia/Amman
+Dubai|United Arab Emirates|ae|Asia/Dubai
+Abu Dhabi|United Arab Emirates|ae|Asia/Dubai
+Riyadh|Saudi Arabia|sa|Asia/Riyadh
+Doha|Qatar|qa|Asia/Qatar
+Tehran|Iran|ir|Asia/Tehran
+Mumbai|India|in|Asia/Kolkata
+New Delhi|India|in|Asia/Kolkata
+Bangalore|India|in|Asia/Kolkata
+Kathmandu|Nepal|np|Asia/Kathmandu
+Bangkok|Thailand|th|Asia/Bangkok
+Singapore|Singapore|sg|Asia/Singapore
+Jakarta|Indonesia|id|Asia/Jakarta
+Bali|Indonesia|id|Asia/Makassar
+Ho Chi Minh City|Vietnam|vn|Asia/Ho_Chi_Minh
+Hong Kong|Hong Kong|hk|Asia/Hong_Kong
+Beijing|China|cn|Asia/Shanghai
+Shanghai|China|cn|Asia/Shanghai
+Taipei|Taiwan|tw|Asia/Taipei
+Manila|Philippines|ph|Asia/Manila
+Seoul|South Korea|kr|Asia/Seoul
+Tokyo|Japan|jp|Asia/Tokyo
+Sydney|Australia|au|Australia/Sydney
+Melbourne|Australia|au|Australia/Melbourne
+Brisbane|Australia|au|Australia/Brisbane
+Perth|Australia|au|Australia/Perth
+Auckland|New Zealand|nz|Pacific/Auckland
+Honolulu|United States|us|Pacific/Honolulu
+Anchorage|United States|us|America/Anchorage
+Los Angeles|United States|us|America/Los_Angeles
+San Francisco|United States|us|America/Los_Angeles
+Seattle|United States|us|America/Los_Angeles
+Las Vegas|United States|us|America/Los_Angeles
+Vancouver|Canada|ca|America/Vancouver
+Denver|United States|us|America/Denver
+Phoenix|United States|us|America/Phoenix
+Chicago|United States|us|America/Chicago
+Dallas|United States|us|America/Chicago
+Houston|United States|us|America/Chicago
+Mexico City|Mexico|mx|America/Mexico_City
+Cancun|Mexico|mx|America/Cancun
+New York|United States|us|America/New_York
+Boston|United States|us|America/New_York
+Washington DC|United States|us|America/New_York
+Miami|United States|us|America/New_York
+Toronto|Canada|ca|America/Toronto
+Montreal|Canada|ca|America/Toronto
+Halifax|Canada|ca|America/Halifax
+St. John's|Canada|ca|America/St_Johns
+Buenos Aires|Argentina|ar|America/Argentina/Buenos_Aires
+Sao Paulo|Brazil|br|America/Sao_Paulo
+Rio de Janeiro|Brazil|br|America/Sao_Paulo
+Santiago|Chile|cl|America/Santiago
+Bogota|Colombia|co|America/Bogota
+Lima|Peru|pe|America/Lima
+Cape Town|South Africa|za|Africa/Johannesburg
+Johannesburg|South Africa|za|Africa/Johannesburg
+Nairobi|Kenya|ke|Africa/Nairobi
+Lagos|Nigeria|ng|Africa/Lagos
+Addis Ababa|Ethiopia|et|Africa/Addis_Ababa
+Marrakesh|Morocco|ma|Africa/Casablanca
+UTC|Coordinated Universal Time||UTC
+`.trim().split('\n').map(l => { const [name, country, cc, tz] = l.split('|'); return {name, country, cc, tz}; }).filter(c => validTz(c.tz));
+
+const ALL_ZONES = (Intl.supportedValuesOf ? Intl.supportedValuesOf('timeZone') : [])
+  .filter(z => z.includes('/'))
+  .map(z => ({name: z.split('/').pop().replace(/_/g, ' '), country: z.split('/')[0], cc: '', tz: z}));
+
+// ---------- state ----------
+const STORE = 'dayline.v2';
+let state = load();
+function load(){
+  try{
+    const s = JSON.parse(localStorage.getItem(STORE));
+    if (s && Array.isArray(s.cities) && s.cities.length) return {h12: false, px: 64, ...s, cities: s.cities.filter(c => validTz(c.tz))};
+  }catch{}
+  const defs = ['Tel Aviv', 'London', 'New York', 'Montreal', 'Los Angeles', 'Tokyo'];
+  const cities = defs.map(n => CITY_DATA.find(c => c.name === n)).filter(Boolean)
+    .map(c => ({id: uid(), name: c.name, country: c.country, cc: c.cc, tz: c.tz}));
+  return {cities, homeId: cities[0].id, h12: false, px: 64};
+}
+function save(){ try{ localStorage.setItem(STORE, JSON.stringify(state)); }catch{} }
+const byId = id => state.cities.find(c => c.id === id);
+const home = () => byId(state.homeId) || state.cities[0];
+
+let cursor = null;               // null = live; otherwise absolute ms
+const getT = () => cursor ?? Date.now();
+let editing = false;
+
+// ---------- time helpers ----------
+const dtf = {}, offCache = new Map(), abbrF = {};
+function tzOffset(tz, t){
+  const key = tz + '|' + Math.floor(t / (15 * MIN));
+  let v = offCache.get(key);
+  if (v !== undefined) return v;
+  const f = dtf[tz] || (dtf[tz] = new Intl.DateTimeFormat('en-US', {timeZone: tz, hourCycle: 'h23', year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric', second: 'numeric'}));
+  const p = {}; for (const x of f.formatToParts(t)) p[x.type] = x.value;
+  const asUTC = Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour % 24, +p.minute, +p.second);
+  v = Math.round((asUTC - Math.floor(t / 1000) * 1000) / MIN);
+  if (offCache.size > 4000) offCache.clear();
+  offCache.set(key, v);
+  return v;
+}
+function tzAbbr(tz, t){
+  const f = abbrF[tz] || (abbrF[tz] = new Intl.DateTimeFormat('en-US', {timeZone: tz, timeZoneName: 'short'}));
+  return f.formatToParts(t).find(p => p.type === 'timeZoneName')?.value || '';
+}
+const fDate = new Intl.DateTimeFormat('en-US', {weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC'});
+const fLong = new Intl.DateTimeFormat('en-US', {weekday: 'long', month: 'long', day: 'numeric', timeZone: 'UTC'});
+const fWd = new Intl.DateTimeFormat('en-US', {weekday: 'short', timeZone: 'UTC'});
+const fMd = new Intl.DateTimeFormat('en-GB', {day: 'numeric', month: 'short', timeZone: 'UTC'});
+function fmtTime(L, small = true){
+  const d = new Date(L), h = d.getUTCHours(), m = d.getUTCMinutes();
+  if (!state.h12) return pad(h) + ':' + pad(m);
+  const ap = h < 12 ? 'AM' : 'PM';
+  return ((h % 12) || 12) + ':' + pad(m) + (small ? `<small>${ap}</small>` : ' ' + ap);
+}
+const fmtHour = h => !state.h12 ? String(h) : ((h % 12) || 12) + `<small>${h < 12 ? 'A' : 'P'}</small>`;
+function fmtDiff(min){
+  if (min === 0) return '';
+  const a = Math.abs(min), h = Math.floor(a / 60), m = a % 60;
+  return (min > 0 ? '+' : '−') + h + (m ? ':' + pad(m) : '') + 'H';
+}
+function relLabel(ms){
+  const m = Math.round(ms / MIN);
+  if (m === 0) return 'right now';
+  const a = Math.abs(m), d = Math.floor(a / 1440), h = Math.floor(a % 1440 / 60), mm = a % 60;
+  const parts = [d && d + 'd', h && h + 'h', mm && mm + 'm'].filter(Boolean).join(' ');
+  return m > 0 ? 'in ' + parts : parts + ' ago';
+}
+
+// ---------- cards ----------
+const rowsWrap = $('#rows'), tpl = $('#rowTpl');
+function buildRows(){
+  rowsWrap.innerHTML = '';
+  for (const c of state.cities){
+    const row = tpl.content.firstElementChild.cloneNode(true);
+    row.dataset.id = c.id;
+    row.classList.toggle('is-home', c.id === state.homeId);
+    row.querySelector('.flag').outerHTML = flagHTML(c.cc);
+    const name = row.querySelector('.name');
+    name.textContent = c.name;
+    if (editing){ name.contentEditable = 'plaintext-only'; name.spellcheck = false; }
+    row._ = {time: row.querySelector('.time'), date: row.querySelector('.date'), sub: row.querySelector('.sub'), cells: row.querySelector('.cells'), now: row.querySelector('.now-mark')};
+    rowsWrap.appendChild(row);
+  }
+  document.body.classList.toggle('editing', editing);
+  render();
+}
+
+let rafPending = false;
+function scheduleRender(){ if (!rafPending){ rafPending = true; requestAnimationFrame(render); } }
+
+let lastSky = -1;
+function paintSky(hf){
+  if (Math.abs(hf - lastSky) < 0.01) return;
+  lastSky = hf;
+  const [t, m, h] = skyAt(hf), root = document.documentElement.style;
+  root.setProperty('--s1', rgb(t)); root.setProperty('--s2', rgb(m)); root.setProperty('--s3', rgb(h));
+  document.body.classList.toggle('day', lum(m) > 0.62);
+  $('#themeColor').content = rgb(t);
+  sky.s1 = t; sky.s2 = m; sky.s3 = h;
+  // sun travels 6:00 -> 19:00, moon 19:00 -> 6:00, along an arc that dips behind the hills
+  const arc = p => [(8 + p * 84) / 100, (76 - Math.sin(Math.PI * Math.min(1, Math.max(0, p))) * 62) / 100, p >= -0.04 && p <= 1.04 ? 1 - sunVeil : 0];
+  sky.sun = arc((hf - 6) / 13);
+  sky.moon = arc((((hf - 19) % 24) + 24) % 24 / 11);
+  sky.light = (hf > 5 && hf < 20) ? Math.max(0.36, Math.min(1, 1.25 * Math.sin(Math.PI * (hf - 5) / 15))) : 0.36;
+  sky.sat = 0.55 + sky.light * 0.45;
+  sky.night = Math.max(0, Math.min(1, (0.62 - lum(m)) * 3));
+  sky.day = Math.max(0, Math.min(1, (lum(m) - 0.25) / 0.45));
+}
+
+function render(){
+  rafPending = false;
+  const T = getT(), now = Date.now(), PX = state.px;
+  const hc = home(), hOff = tzOffset(hc.tz, T), hL = T + hOff * MIN;
+  const strip0 = rowsWrap.querySelector('.strip');
+  const W = strip0 ? strip0.clientWidth : 600, c = W / 2;
+  const nowX = c - (T - now) / H * PX;
+
+  for (const row of rowsWrap.children){
+    const city = byId(row.dataset.id); if (!city) continue;
+    const r = row._;
+    const off = tzOffset(city.tz, T), L = T + off * MIN;
+    r.time.innerHTML = fmtTime(L);
+    r.sub.innerHTML = (city.id === state.homeId ? `<span class="home-badge">${city.me ? 'Here' : 'Home'}</span> · ` : '') + esc(`${city.country}${city.country ? ' · ' : ''}${tzAbbr(city.tz, T)}`);
+    const dd = Math.floor(L / DAY) - Math.floor(hL / DAY);
+    const diff = fmtDiff(off - hOff);
+    r.date.innerHTML = (dd > 0 ? '<span class="nd">Tomorrow</span>' : dd < 0 ? '<span class="pd">Yesterday</span>' : fDate.format(L))
+      + (diff ? `<span class="diff">${diff}</span>` : '');
+
+    const first = Math.floor((L - c / PX * H) / H) - 1, last = Math.ceil((L + c / PX * H) / H);
+    let html = '';
+    for (let k = first; k <= last; k++){
+      const start = k * H, x = c + (start - L) / H * PX, d = new Date(start), h = d.getUTCHours();
+      const work = h >= 9 && h < 18 && d.getUTCDay() % 6 !== 0;
+      const inner = h === 0 ? `${fWd.format(start)} ${d.getUTCDate()}` : fmtHour(h);
+      html += `<div class="cell${work ? ' work' : ''}${h === 0 ? ' midnight' : ''}" data-k="${k}" style="width:${PX + 1}px;transform:translateX(${x.toFixed(1)}px);--g:linear-gradient(90deg,${rgb(STRIP[h])},${rgb(STRIP[h + 1])})"><span class="hl">${inner}</span><i class="bar"></i></div>`;
+    }
+    r.cells.innerHTML = html;
+    r.now.style.display = (cursor !== null && nowX > -2 && nowX < W + 2) ? '' : 'none';
+    r.now.style.left = nowX + 'px';
+  }
+
+  $('#whenTime').innerHTML = fmtTime(hL);
+  $('#whenSub').innerHTML = `<b>${esc(hc.name)}</b>, ${fLong.format(hL)}, ${relLabel(T - now)}.`;
+  $('#nowBtn').classList.toggle('show', cursor !== null);
+  applyWeather(T);
+  const d = new Date(hL);
+  paintSky(d.getUTCHours() + d.getUTCMinutes() / 60);
+}
+
+// ---------- motion ----------
+let anim = null;
+function stopAnim(){ if (anim) cancelAnimationFrame(anim); anim = null; }
+function animateTo(target, done){
+  stopAnim();
+  const from = getT(), t0 = performance.now();
+  const dur = reduceMotion ? 0 : Math.min(700, 220 + Math.abs(target - from) / H * 30);
+  const step = t => {
+    const p = dur ? Math.min(1, (t - t0) / dur) : 1, e = 1 - Math.pow(1 - p, 3);
+    cursor = from + (target - from) * e;
+    render();
+    if (p < 1) anim = requestAnimationFrame(step); else { anim = null; done && done(); render(); }
+  };
+  anim = requestAnimationFrame(step);
+}
+const snap = (t, mins = 15) => Math.round(t / (mins * MIN)) * mins * MIN;
+function settle(){ if (Math.abs(getT() - Date.now()) < 8 * MIN) return goNow(); animateTo(snap(getT())); }
+function goNow(){ animateTo(Date.now(), () => { cursor = null; }); }
+function inertia(v){
+  if (reduceMotion) return settle();
+  stopAnim();
+  let last = performance.now();
+  const step = t => {
+    const dt = t - last; last = t;
+    cursor = getT() - v * dt / state.px * H;
+    v *= Math.pow(0.93, dt / 16);
+    render();
+    if (Math.abs(v) > 0.03) anim = requestAnimationFrame(step); else { anim = null; settle(); }
+  };
+  anim = requestAnimationFrame(step);
+}
+
+// ---------- drag the timelines ----------
+let drag = null;
+rowsWrap.addEventListener('pointerdown', e => {
+  const st = e.target.closest('.strip');
+  if (!st || e.button > 0) return;
+  stopAnim();
+  drag = {x: e.clientX, startT: getT(), moved: false, lastX: e.clientX, lastT: performance.now(), v: 0, cell: e.target.closest('.cell'), row: e.target.closest('.card'), id: e.pointerId};
+  st.setPointerCapture(e.pointerId);
+});
+rowsWrap.addEventListener('pointermove', e => {
+  if (!drag || e.pointerId !== drag.id) return;
+  const dx = e.clientX - drag.x;
+  if (!drag.moved && Math.abs(dx) < 4) return;
+  drag.moved = true;
+  cursor = drag.startT - dx / state.px * H;
+  const t = performance.now(), dt = t - drag.lastT;
+  if (dt > 0) drag.v = 0.7 * ((e.clientX - drag.lastX) / dt) + 0.3 * drag.v;
+  drag.lastX = e.clientX; drag.lastT = t;
+  scheduleRender();
+});
+function endDrag(e){
+  if (!drag || e.pointerId !== drag.id) return;
+  const d = drag; drag = null;
+  if (!d.moved){
+    if (d.cell && d.row){
+      const city = byId(d.row.dataset.id);
+      animateTo(+d.cell.dataset.k * H - tzOffset(city.tz, getT()) * MIN);
+    }
+    return;
+  }
+  const v = performance.now() - d.lastT > 80 ? 0 : d.v;
+  if (Math.abs(v) > 0.15) inertia(v); else settle();
+}
+rowsWrap.addEventListener('pointerup', endDrag);
+rowsWrap.addEventListener('pointercancel', endDrag);
+
+let wheelTimer;
+rowsWrap.addEventListener('wheel', e => {
+  if (!e.target.closest('.strip')) return;
+  e.preventDefault(); stopAnim();
+  const d = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
+  cursor = getT() + d / state.px * H * 0.6;
+  scheduleRender();
+  clearTimeout(wheelTimer); wheelTimer = setTimeout(settle, 180);
+}, {passive: false});
+
+$('#nowBtn').addEventListener('click', goNow);
+$('#minus1').addEventListener('click', () => animateTo(snap(getT()) - H));
+$('#plus1').addEventListener('click', () => animateTo(snap(getT()) + H));
+
+document.addEventListener('keydown', e => {
+  if (e.target.closest('input,[contenteditable]') || $('#addDlg').open) return;
+  if (e.key === 'ArrowRight' || e.key === 'ArrowLeft'){
+    e.preventDefault();
+    animateTo(snap(getT()) + (e.shiftKey ? 60 : 15) * MIN * (e.key === 'ArrowRight' ? 1 : -1));
+  } else if (e.key === 'n' || e.key === 'N' || e.key === 'Home') goNow();
+  else if (e.key === '+' || e.key === '=') zoom(1);
+  else if (e.key === '-') zoom(-1);
+});
+
+// ---------- manage places ----------
+rowsWrap.addEventListener('click', e => {
+  const row = e.target.closest('.card'); if (!row) return;
+  const id = row.dataset.id;
+  if (e.target.closest('.del')){
+    if (state.cities.length <= 1) return;
+    state.cities = state.cities.filter(c => c.id !== id);
+    if (state.homeId === id) state.homeId = state.cities[0].id;
+    save(); buildRows();
+  } else if (e.target.closest('.set-home')){
+    state.homeId = id; save(); lastSky = -1; buildRows(); loadWeather();
+  }
+});
+rowsWrap.addEventListener('focusout', e => {
+  const n = e.target.closest('.name'); if (!n) return;
+  const c = byId(n.closest('.card').dataset.id), v = n.textContent.trim();
+  if (v) c.name = v; else n.textContent = c.name;
+  save(); render();
+});
+rowsWrap.addEventListener('keydown', e => {
+  if (e.target.closest('.name') && e.key === 'Enter'){ e.preventDefault(); e.target.blur(); }
+});
+
+let lift = null;
+rowsWrap.addEventListener('pointerdown', e => {
+  const h = e.target.closest('.handle'); if (!h) return;
+  e.preventDefault();
+  lift = {row: h.closest('.card')};
+  lift.row.classList.add('lifting');
+  h.setPointerCapture(e.pointerId);
+  h.addEventListener('pointermove', onLift);
+  h.addEventListener('pointerup', endLift, {once: true});
+  h.addEventListener('pointercancel', endLift, {once: true});
+  h.addEventListener('lostpointercapture', endLift, {once: true});
+});
+function onLift(e){
+  if (!lift) return;
+  const row = lift.row;
+  let moved = true;
+  while (moved){
+    moved = false;
+    const prev = row.previousElementSibling, next = row.nextElementSibling;
+    if (prev){ const b = prev.getBoundingClientRect(); if (e.clientY < b.top + b.height / 2){ rowsWrap.insertBefore(prev, row.nextSibling); moved = true; continue; } }
+    if (next){ const b = next.getBoundingClientRect(); if (e.clientY > b.top + b.height / 2){ rowsWrap.insertBefore(next, row); moved = true; } }
+  }
+}
+function endLift(){
+  if (!lift) return;
+  lift.row.querySelector('.handle').removeEventListener('pointermove', onLift);
+  lift.row.classList.remove('lifting');
+  const order = [...rowsWrap.children].map(r => r.dataset.id);
+  state.cities.sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id));
+  save();
+  lift = null;
+}
+
+// ---------- nav ----------
+$('#editBtn').addEventListener('click', () => {
+  editing = !editing;
+  $('#editBtn').classList.toggle('on', editing);
+  $('#editBtn').textContent = editing ? 'Done' : 'Edit';
+  buildRows();
+});
+function setFmt(h12){ state.h12 = h12; $('#fmtBtn').textContent = h12 ? '12h' : '24h'; save(); render(); }
+$('#fmtBtn').addEventListener('click', () => setFmt(!state.h12));
+function zoom(dir){
+  const steps = [44, 54, 64, 80, 100, 124];
+  let i = steps.indexOf(state.px); if (i < 0) i = 2;
+  state.px = steps[Math.max(0, Math.min(steps.length - 1, i + dir))];
+  save(); render();
+}
+$('#zoomIn').addEventListener('click', () => zoom(1));
+$('#zoomOut').addEventListener('click', () => zoom(-1));
+
+// ---------- add dialog ----------
+const dlg = $('#addDlg'), q = $('#q'), results = $('#results');
+let resList = [], sel = 0;
+function openAdd(){ q.value = ''; dlg.showModal(); search(); q.focus(); }
+$('#addBtn').addEventListener('click', openAdd);
+$('#addBtn2').addEventListener('click', openAdd);
+$('#closeDlg').addEventListener('click', () => dlg.close());
+dlg.addEventListener('click', e => { if (e.target === dlg) dlg.close(); });
+
+const norm = s => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ'".\-_]/g, '').replace(/\s+/g, ' ');
+function search(){
+  const term = norm(q.value.trim());
+  let list;
+  if (!term) list = CITY_DATA.slice();
+  else {
+    const hit = c => [c.name, c.country, c.tz].some(f => norm(f).includes(term));
+    const starts = c => norm(c.name).startsWith(term);
+    const cities = CITY_DATA.filter(hit).sort((a, b) => starts(b) - starts(a));
+    const zones = ALL_ZONES.filter(hit).filter(z => !cities.some(c => c.tz === z.tz && norm(c.name) === norm(z.name)));
+    list = cities.concat(zones).slice(0, 60);
+  }
+  resList = list; sel = 0;
+  const T = getT(), hOff = tzOffset(home().tz, T);
+  results.innerHTML = list.length ? list.map((c, i) => {
+    const off = tzOffset(c.tz, T);
+    return `<button class="res${i === 0 ? ' sel' : ''}" data-i="${i}">
+      ${flagHTML(c.cc)}
+      <div><div class="rn">${esc(c.name)}</div><div class="rc mono">${esc(c.country)} · ${tzAbbr(c.tz, T)}</div></div>
+      <div class="rt num">${fmtTime(T + off * MIN, false)}<small>${fmtDiff(off - hOff) || 'SAME TIME'}</small></div>
+    </button>`;
+  }).join('') : `<div class="empty">No place called “${esc(q.value)}”. Try a city or a country.</div>`;
+}
+q.addEventListener('input', search);
+q.addEventListener('keydown', e => {
+  const items = results.querySelectorAll('.res');
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp'){
+    e.preventDefault();
+    sel = Math.max(0, Math.min(items.length - 1, sel + (e.key === 'ArrowDown' ? 1 : -1)));
+    items.forEach((el, i) => el.classList.toggle('sel', i === sel));
+    items[sel]?.scrollIntoView({block: 'nearest'});
+  } else if (e.key === 'Enter' && resList[sel]) addCity(resList[sel]);
+});
+results.addEventListener('click', e => { const b = e.target.closest('.res'); if (b) addCity(resList[+b.dataset.i]); });
+function addCity(c){
+  state.cities.push({id: uid(), name: c.name, country: c.country, cc: c.cc, tz: c.tz});
+  save(); dlg.close(); buildRows();
+  requestAnimationFrame(() => rowsWrap.lastElementChild?.scrollIntoView({block: 'nearest', behavior: reduceMotion ? 'auto' : 'smooth'}));
+}
+
+// ---------- the scene: painted entirely on the GPU (WebGL2) ----------
+// The brush strokes are a shader too: every pixel finds which overlapping elongated "stroke" covers it,
+// takes that stroke's shade, and adds bristle streaks along it. Static strokes are baked once per resize;
+// clouds, grass, flowers, rain and snow are drawn every frame.
+function rng(seed){ return () => { seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+const mixC = (a, b, t) => a.map((v, i) => v + (b[i] - v) * t);
+const n1 = (x, s) => .5 + .25 * Math.sin(x + s) + .15 * Math.sin(x * 2.3 + s * 1.7) + .1 * Math.sin(x * 5.1 + s * 2.9);
+const meaY = (x, H) => H * .79 + (n1(x / 300, 11) - .5) * H * .05;
+
+const sky = {s1: [28, 33, 64], s2: [46, 47, 90], s3: [74, 63, 107], sun: [0, 0, 0], moon: [0, 0, 0], light: .36, sat: .7, night: 1, day: 0};
+const live = {wind: .22, windT: .22, dir: 1, dirT: 1, cover: .25, coverT: .25, over: 0, overT: 0, fog: 0, fogT: 0,
+  kind: null, rain: 0, rainT: 0, t: 0, rt: 0, drift: 0, flash: 0, nextFlash: 0};
+let sunVeil = 0;
+
+const GLSL_COMMON = `#version 300 es
+precision highp float;
+uniform vec2 uRes; uniform float uScale;
+uniform float uLight, uSat, uOver, uFog, uFlash;
+float sq(float x){ return x * x; }
+float hash1(vec2 p){ vec3 p3 = fract(vec3(p.xyx) * .1031); p3 += dot(p3, p3.yzx + 33.33); return fract((p3.x + p3.y) * p3.z); }
+vec4 hash4(vec2 p){ vec4 p4 = fract(vec4(p.xyxy) * vec4(.1031, .1030, .0973, .1099)); p4 += dot(p4, p4.wzxy + 33.33); return fract((p4.xxyz + p4.yzzw) * p4.zywx); }
+float vnoise(vec2 p){ vec2 i = floor(p), f = fract(p), u = f * f * (3. - 2. * f);
+  return mix(mix(hash1(i), hash1(i + vec2(1, 0)), u.x), mix(hash1(i + vec2(0, 1)), hash1(i + vec2(1, 1)), u.x), u.y); }
+float n1(float x, float s){ return .5 + .25 * sin(x + s) + .15 * sin(x * 2.3 + s * 1.7) + .1 * sin(x * 5.1 + s * 2.9); }
+float farY(float x){ return uRes.y * .6 + (n1(x / 420., 3.3) - .5) * uRes.y * .22 - uRes.y * .07 * exp(-sq(x / uRes.x - .3) / .02); }
+float midY(float x){ return min(uRes.y * .74 - uRes.y * .27 * exp(-sq(x / uRes.x - .9) / .05), uRes.y * .72 - uRes.y * .1 * exp(-sq(x / uRes.x - .12) / .025)) + (n1(x / 260., 7.) - .5) * uRes.y * .05; }
+float meaY(float x){ return uRes.y * .79 + (n1(x / 300., 11.) - .5) * uRes.y * .05; }
+// a mosaic of overlapping tapered strokes: x = shade with bristles, y = position across the stroke, z = a second random
+vec3 stroke(vec2 p, vec2 cell, float seed){
+  vec2 q = p / cell, i = floor(q);
+  float best = -1.; vec3 res = vec3(.5, 0., .5);
+  for (int yy = -1; yy <= 1; yy++) for (int xx = -2; xx <= 2; xx++){
+    vec2 c = i + vec2(float(xx), float(yy));
+    vec4 h = hash4(c + seed * 31.7);
+    vec2 d = q - c - h.xy;
+    float ang = (h.z - .5) * .2, cs = cos(ang), sn = sin(ang);   // small tilt: keeps every stroke inside the searched cells
+    d = vec2(cs * d.x + sn * d.y, -sn * d.x + cs * d.y);
+    float len = .75 + h.w * .95, u = d.x / len;
+    float w = (.45 + h.z * .35) * (1. - u * u * .6);
+    if (abs(u) < 1. - .14 * vnoise(vec2(d.y * 4., h.x * 50.)) && abs(d.y) < w){
+      float pr = fract(h.x * 7.13 + h.y * 3.71 + h.w * 1.37);
+      if (pr > best){
+        best = pr;
+        float br = vnoise(vec2(u * 1.5 + h.x * 13., d.y / w * 5. + h.y * 29.));
+        res = vec3(clamp(fract(h.w * 31.7 + h.y * 3.1) * .75 + br * .35 - .05, 0., 1.), d.y / w, fract(h.z * 17.3));
+      }
+    }
+  }
+  return res;
+}
+vec3 landAdjust(vec3 c){ float l = dot(c, vec3(.2126, .7152, .0722)); return mix(vec3(l), c, uSat) * uLight; }
+vec3 grade(vec3 c, float y){
+  float l = dot(c, vec3(.2126, .7152, .0722));
+  c = mix(c, vec3(l), uOver * .6) * (1. - uOver * .15);
+  c = mix(c, vec3(.886, .894, .91) * (.45 + uLight * .6), uFog * smoothstep(.25, .72, y / uRes.y) * .85);
+  return c + uFlash * vec3(.55, .57, .65);
+}
+`;
+const VS_FULL = `#version 300 es
+void main(){ vec2 p = vec2(float((gl_VertexID << 1) & 2), float(gl_VertexID & 2)); gl_Position = vec4(p * 2. - 1., 0., 1.); }`;
+
+const FS_FIELD = GLSL_COMMON + `
+out vec4 o;
+void main(){
+  vec2 p = vec2(gl_FragCoord.x, uRes.y * uScale - gl_FragCoord.y) / uScale;
+  vec2 ps = p + vec2(0., (vnoise(vec2(p.x / 260., 1.7)) - .5) * 70.);
+  vec3 a = stroke(ps, vec2(120., 24.), 1.), b = stroke(ps + 37., vec2(58., 13.), 2.);
+  float skyV = .5 + (a.x - .5) * .3 + (b.x - .5) * .18 + (vnoise(p / vec2(300., 70.)) - .5) * .2 + p.y / uRes.y * .05;
+  float fy = farY(p.x), my = midY(p.x), ey = meaY(p.x);
+  float j = (stroke(p, vec2(60., 14.), 3.).x - .5) * 9.;
+  float layer = p.y > ey + j ? 3. : p.y > my + j ? 2. : p.y > fy + j ? 1. : 0.;
+  float ridge = layer > 2.5 ? ey : layer > 1.5 ? my : fy;
+  vec2 lp = vec2(p.x, p.y - ridge * .55);
+  vec3 s1 = stroke(lp, vec2(54., 11.), 4. + layer), s2 = stroke(lp + 23., vec2(24., 7.), 8. + layer);
+  float land = .5 + (s1.x - .5) * .42 + (s2.x - .5) * .2 - clamp((p.y - ridge) / 160., 0., 1.) * .1 + (vnoise(p / 40.) - .5) * .1;
+  o = vec4(clamp(skyV, 0., 1.), clamp(land, 0., 1.), layer / 3., s2.z);
+}`;
+
+const FS_MAIN = GLSL_COMMON + `
+uniform sampler2D uField;
+uniform vec3 uS1, uS2, uS3, uSun, uMoon;
+uniform float uNight, uDay, uCover, uDrift, uT;
+out vec4 o;
+vec3 overlay(vec3 b, float a){ return mix(2. * a * b, 1. - 2. * (1. - a) * (1. - b), step(.5, b)); }
+float fbm(vec2 p){ float v = 0., a = .5; for (int i = 0; i < 4; i++){ v += a * vnoise(p); p = p * 2.03 + 17.; a *= .5; } return v; }
+vec3 orb(vec3 c, vec3 o, float R, vec2 p, float fr, vec3 a, vec3 b, vec3 e, vec3 glow){
+  if (o.z <= 0.) return c;
+  vec2 op = o.xy * uRes; float d = length(p - op);
+  c += glow * exp(-d / (R * 1.8)) * o.z;
+  float edge = R * (1. + (fr - .5) * .22);
+  if (d < edge + 2.){
+    float t = d / R;
+    vec3 col = t < .5 ? mix(a, b, t * 2.) : mix(b, e, clamp((t - .5) * 2., 0., 1.));
+    col *= .9 + .2 * vnoise(vec2(atan(p.y - op.y, p.x - op.x) * 6., d * .18));
+    c = mix(c, col, o.z * smoothstep(edge, edge - 2., d));
+  }
+  return c;
+}
+void main(){
+  vec4 f = texelFetch(uField, ivec2(gl_FragCoord.xy), 0);
+  vec2 p = vec2(gl_FragCoord.x, uRes.y * uScale - gl_FragCoord.y) / uScale;
+  float y = p.y / uRes.y, layer = floor(f.b * 3. + .5);
+  vec3 c;
+  if (layer < .5){
+    vec3 g = y < .42 ? mix(uS1, uS2, y / .42) : mix(uS2, uS3, clamp((y - .42) / .28, 0., 1.));
+    c = overlay(g, f.r);
+    vec2 sc = floor(p / 38.); vec4 sh = hash4(sc + 5.1);
+    float star = step(.72, sh.z) * smoothstep(1.5 + sh.w, .2, length(p - (sc + .15 + sh.xy * .7) * 38.)) * (.65 + .35 * sin(uT * 2. + sh.w * 30.));
+    float R = clamp(uRes.x * .035, 34., 54.);
+    c = orb(c, uSun, R, p, f.r, vec3(1., .84, .47), vec3(.97, .63, .27), vec3(.89, .41, .2), vec3(1., .74, .43) * .5);
+    c = orb(c, uMoon, R * .9, p, f.r, vec3(1., .99, .93), vec3(.93, .9, .81), vec3(.78, .76, .67), vec3(1., .98, .88) * .16);
+    float mask = smoothstep(uRes.y * .64, uRes.y * .4, p.y);
+    if (mask > 0.){
+      vec2 cp = p - vec2(uDrift, 0.);
+      float thr = mix(.64, .3, uCover), d0 = fbm(cp / vec2(340., 110.));
+      if (d0 > thr - .1){
+        vec3 s = stroke(cp, vec2(46., 12.), 9.);
+        float a = smoothstep(thr, thr + .05 + uCover * .08, d0 + (s.x - .5) * .08) * mask;
+        float d1 = fbm((cp - vec2(0., 16.)) / vec2(340., 110.));
+        float shade = clamp((d0 - d1) * 4.5 + .62, 0., 1.);
+        vec3 light = mix(uS2 * 1.2 + .1, vec3(.98, .97, .95), uDay * .8), dark = mix(uS1 * 1.1, vec3(.62, .64, .7), uDay * .7);
+        c = mix(c, mix(dark, light, shade) * (.95 + s.x * .09), a * .92);
+        star *= 1. - a;
+      }
+    }
+    c += star * uNight * vec3(1., .98, .9);
+  } else {
+    vec3 base = layer < 1.5 ? vec3(.463, .573, .518) : layer < 2.5 ? vec3(.259, .369, .251) : vec3(.18, .29, .133);
+    c = mix(base + (f.g - .5) * .22, vec3(.78, .75, .59), f.a * .07);
+    c = landAdjust(c);
+  }
+  c = grade(c, p.y) + (hash1(gl_FragCoord.xy) - .5) * .03;
+  o = vec4(c, 1.);
+}`;
+
+const GLSL_BEND = `
+uniform float uT, uWind, uDir;
+float bend(float x, float lean, float ph, float flex){
+  float gust = sin(uT * 1.7 + x * .013 + ph) * .55 + sin(uT * .61 + x * .0043) * .45;
+  return lean + flex * (uDir * uWind * (.32 + .42 * gust) + .05 * sin(uT * 1.3 + ph));
+}
+vec2 bez(vec2 b, float L, float k, float t){
+  vec2 p1 = b + vec2(k * L * .25, -L * .6), p2 = b + vec2(k * L, -L * (1. - min(.5, abs(k)) * .3));
+  return mix(mix(b, p1, t), mix(p1, p2, t), t);
+}
+vec4 clip(vec2 p){ return vec4(p.x / uRes.x * 2. - 1., 1. - p.y / uRes.y * 2., 0., 1.); }
+`;
+const VS_BLADE = GLSL_COMMON + GLSL_BEND + `
+layout(location = 0) in vec2 aV;   // side, t along the blade
+layout(location = 1) in vec4 aA;   // x, y, length, lean
+layout(location = 2) in vec3 aB;   // phase, flex, width
+layout(location = 3) in vec3 aC;   // colour
+out vec3 vC; out float vY;
+void main(){
+  float k = bend(aA.x, aA.w, aB.x, aB.y), t = aV.y;
+  vec2 pt = bez(aA.xy, aA.z, k, t);
+  vec2 tg = normalize(bez(aA.xy, aA.z, k, min(1., t + .02)) - bez(aA.xy, aA.z, k, max(0., t - .02)) + vec2(0., -1e-4));
+  pt += vec2(-tg.y, tg.x) * aV.x * aB.z * .5 * (1. - t * .85);
+  vC = aC; vY = pt.y;
+  gl_Position = clip(pt);
+}`;
+const FS_BLADE = GLSL_COMMON + `
+in vec3 vC; in float vY; out vec4 o;
+void main(){ o = vec4(grade(landAdjust(vC), vY), .92); }`;
+const VS_DAB = GLSL_COMMON + GLSL_BEND + `
+layout(location = 0) in vec2 aQ;   // corner
+layout(location = 1) in vec4 aA;   // x, y, stem height, position along the stem
+layout(location = 2) in vec4 aB;   // phase, flex, lean, size
+layout(location = 3) in vec4 aC;   // colour, jitter
+out vec2 vQ; out vec3 vC; out float vY;
+void main(){
+  float k = bend(aA.x, aB.z, aB.x, aB.y);
+  vec2 c = bez(aA.xy, aA.z, k, aA.w) + vec2(aC.w, 0.);
+  vec2 pt = c + aQ * vec2(aB.w, aB.w * .8);
+  vQ = aQ; vC = aC.rgb; vY = pt.y;
+  gl_Position = clip(pt);
+}`;
+const FS_DAB = GLSL_COMMON + `
+in vec2 vQ; in vec3 vC; in float vY; out vec4 o;
+void main(){ float r = length(vQ); if (r > 1.) discard; o = vec4(grade(landAdjust(vC), vY), .9 * smoothstep(1., .7, r)); }`;
+const VS_FALL = GLSL_COMMON + `
+uniform float uTime, uSlant, uMode;
+layout(location = 0) in vec2 aQ;   // along 0..1, across -1..1
+layout(location = 1) in vec4 aA;   // seed x, seed y, speed, length
+out vec2 vQ;
+void main(){
+  float W = uRes.x, H = uRes.y; vec2 pt;
+  if (uMode < .5){
+    float y = mod(aA.y * (H + 120.) + uTime * aA.z * 820., H + 120.) - 60.;
+    vec2 head = vec2(mod(aA.x * W + y * uSlant, W), y), dir = normalize(vec2(-uSlant, -1.));
+    pt = head + dir * aA.w * aQ.x + vec2(-dir.y, dir.x) * aQ.y * .6;
+    vQ = aQ;
+  } else {
+    float y = mod(aA.y * (H + 20.) + uTime * aA.z * 55., H + 20.) - 10.;
+    float x = mod(aA.x * W + uTime * uSlant * 60. + sin(uTime * 1.3 + aA.x * 40.) * 12., W);
+    vQ = vec2(aQ.x * 2. - 1., aQ.y);
+    pt = vec2(x, y) + vQ * (1. + (aA.w - 10.) / 16. * 2.2);
+  }
+  gl_Position = vec4(pt.x / W * 2. - 1., 1. - pt.y / H * 2., 0., 1.);
+}`;
+const FS_FALL = GLSL_COMMON + `
+uniform float uMode; in vec2 vQ; out vec4 o;
+void main(){
+  if (uMode < .5){ o = vec4(.87, .9, .95, .42); return; }
+  float r = length(vQ); if (r > 1.) discard; o = vec4(1., 1., 1., .85 * smoothstep(1., .55, r));
+}`;
+
+const Scene = (() => {
+  const cv = $('#scene');
+  const gl = cv.getContext('webgl2', {antialias: true, alpha: false, powerPreference: 'high-performance', preserveDrawingBuffer: false});
+  if (!gl) return null;
+  const compile = (type, src) => {
+    const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s);
+    if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s));
+    return s;
+  };
+  const program = (vs, fs) => {
+    const p = gl.createProgram();
+    gl.attachShader(p, compile(gl.VERTEX_SHADER, vs)); gl.attachShader(p, compile(gl.FRAGMENT_SHADER, fs)); gl.linkProgram(p);
+    if (!gl.getProgramParameter(p, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(p));
+    const u = {};
+    return {p, u: name => name in u ? u[name] : (u[name] = gl.getUniformLocation(p, name))};
+  };
+  let P;
+  try{
+    P = {field: program(VS_FULL, FS_FIELD), main: program(VS_FULL, FS_MAIN), blade: program(VS_BLADE, FS_BLADE), dab: program(VS_DAB, FS_DAB), fall: program(VS_FALL, FS_FALL)};
+  }catch(e){ console.warn('Dayline: WebGL shaders failed, showing the plain sky.', e); return null; }
+
+  const buf = (data, usage = gl.STATIC_DRAW) => { const b = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, b); gl.bufferData(gl.ARRAY_BUFFER, data, usage); return b; };
+  const attrib = (loc, b, size, stride, off, div) => {
+    gl.bindBuffer(gl.ARRAY_BUFFER, b); gl.enableVertexAttribArray(loc);
+    gl.vertexAttribPointer(loc, size, gl.FLOAT, false, stride * 4, off * 4); gl.vertexAttribDivisor(loc, div);
+  };
+  const empty = gl.createVertexArray();
+  const bladeVerts = buf(new Float32Array([-1, 0, 1, 0, -1, .5, 1, .5, 0, 1]));
+  const quadVerts = buf(new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]));
+  const lineVerts = buf(new Float32Array([0, -1, 0, 1, 1, -1, 1, 1]));
+  const bladeVAO = gl.createVertexArray(), dabVAO = gl.createVertexArray(), fallVAO = gl.createVertexArray();
+  let bladeBuf = gl.createBuffer(), dabBuf = gl.createBuffer(), nBlades = 0, nDabs = 0;
+  const FALL_MAX = 1600, R0 = rng(77);
+  const fallBuf = buf(new Float32Array(Array.from({length: FALL_MAX * 4}, (_, i) => i % 4 === 2 ? .8 + R0() * .5 : i % 4 === 3 ? 10 + R0() * 16 : R0())));
+  gl.bindVertexArray(fallVAO); attrib(0, lineVerts, 2, 2, 0, 0); attrib(1, fallBuf, 4, 4, 0, 1);
+
+  let fieldTex = null, fbo = gl.createFramebuffer(), W = 0, H = 0, S = 1, cw = 0, ch = 0;
+
+  function buildMeadow(){
+    const R = rng(3), blades = [], dabs = [];
+    const top0 = H * .79, count = Math.round(W * (H - top0) / 24);
+    for (let i = 0; i < count; i++){
+      const x = R() * W, top = meaY(x, H), y = top + R() ** .8 * (H - top + 6), depth = (y - top) / (H - top + 1);
+      const c = mixC([30, 54, 28], [132, 160, 72], Math.min(1, R() * .8 + (1 - depth) * .2)).map(v => v / 255);
+      blades.push([x, y, 7 + depth * 34 * (.6 + R() * .7), (R() - .5) * .45 + Math.sin(x / 90) * .1, R() * 6.28, .6 + R() * .7, 1 + depth * 2.2 * (.4 + R() * .6), ...c]);
+    }
+    // wildflowers: a stem plus a small stack of dabs that sway with it
+    const FLOWERS = [[157, 134, 214], [199, 111, 176], [232, 195, 74], [242, 238, 224], [110, 127, 216], [226, 140, 90]];
+    for (let i = 0; i < W / 10; i++){
+      const x = R() * W, top = meaY(x, H), y = top + 6 + R() ** .9 * (H - top), depth = (y - top) / (H - top + 1);
+      const fc = FLOWERS[(R() * FLOWERS.length) | 0], size = 1.2 + depth * 2.8, tall = R() < .5 ? 2 + (R() * 4 | 0) : 1;
+      const sh = size * (tall + 2) * 1.6, ph = R() * 6.28, flex = .7 + R() * .5, lean = (R() - .5) * .2;
+      blades.push([x, y, sh, lean, ph, flex, 1, 52 / 255, 84 / 255, 40 / 255]);
+      for (let k = 0; k < tall; k++){
+        const v = (R() - .5) * 30;
+        dabs.push([x, y, sh, Math.min(1, size * (2 + k * 1.7) / sh), ph, flex, lean, size, ...fc.map(c => Math.max(0, Math.min(255, c + v)) / 255), (R() - .5) * size * .6]);
+      }
+    }
+    blades.sort((a, b) => a[1] - b[1]);
+    nBlades = blades.length; nDabs = dabs.length;
+    gl.bindBuffer(gl.ARRAY_BUFFER, bladeBuf); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(blades.flat()), gl.STATIC_DRAW);
+    gl.bindVertexArray(bladeVAO); attrib(0, bladeVerts, 2, 2, 0, 0); attrib(1, bladeBuf, 4, 10, 0, 1); attrib(2, bladeBuf, 3, 10, 4, 1); attrib(3, bladeBuf, 3, 10, 7, 1);
+    gl.bindBuffer(gl.ARRAY_BUFFER, dabBuf); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(dabs.flat()), gl.STATIC_DRAW);
+    gl.bindVertexArray(dabVAO); attrib(0, quadVerts, 2, 2, 0, 0); attrib(1, dabBuf, 4, 12, 0, 1); attrib(2, dabBuf, 4, 12, 4, 1); attrib(3, dabBuf, 4, 12, 8, 1);
+  }
+
+  const common = prog => {
+    gl.useProgram(prog.p);
+    gl.uniform2f(prog.u('uRes'), W, H); gl.uniform1f(prog.u('uScale'), S);
+    gl.uniform1f(prog.u('uLight'), sky.light); gl.uniform1f(prog.u('uSat'), sky.sat);
+    gl.uniform1f(prog.u('uOver'), live.over); gl.uniform1f(prog.u('uFog'), live.fog); gl.uniform1f(prog.u('uFlash'), live.flash);
+  };
+
+  function resize(){
+    const r = cv.getBoundingClientRect();
+    W = Math.max(1, r.width); H = Math.max(1, r.height);
+    // the painting is soft, so cap the pixel count: this keeps big screens fast
+    S = Math.min(devicePixelRatio || 1, 1.25, Math.sqrt(2.4e6 / (W * H)));
+    cw = Math.round(W * S); ch = Math.round(H * S);
+    cv.width = cw; cv.height = ch;
+    if (fieldTex) gl.deleteTexture(fieldTex);
+    fieldTex = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, fieldTex);
+    gl.texStorage2D(gl.TEXTURE_2D, 1, gl.RGBA8, cw, ch);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, fieldTex, 0);
+    gl.viewport(0, 0, cw, ch);
+    common(P.field); gl.bindVertexArray(empty); gl.drawArrays(gl.TRIANGLES, 0, 3);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    buildMeadow();
+  }
+
+  function draw(){
+    if (!fieldTex) return;
+    gl.viewport(0, 0, cw, ch);
+    gl.disable(gl.BLEND);
+    const m = P.main; common(m);
+    gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, fieldTex); gl.uniform1i(m.u('uField'), 0);
+    gl.uniform3fv(m.u('uS1'), sky.s1.map(v => v / 255)); gl.uniform3fv(m.u('uS2'), sky.s2.map(v => v / 255)); gl.uniform3fv(m.u('uS3'), sky.s3.map(v => v / 255));
+    gl.uniform3fv(m.u('uSun'), sky.sun); gl.uniform3fv(m.u('uMoon'), sky.moon);
+    gl.uniform1f(m.u('uNight'), sky.night); gl.uniform1f(m.u('uDay'), sky.day);
+    gl.uniform1f(m.u('uCover'), live.cover); gl.uniform1f(m.u('uDrift'), live.drift); gl.uniform1f(m.u('uT'), live.rt);
+    gl.bindVertexArray(empty); gl.drawArrays(gl.TRIANGLES, 0, 3);
+
+    gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+    for (const [prog, vao, n, verts] of [[P.blade, bladeVAO, nBlades, 5], [P.dab, dabVAO, nDabs, 4]]){
+      common(prog);
+      gl.uniform1f(prog.u('uT'), live.t); gl.uniform1f(prog.u('uWind'), live.wind); gl.uniform1f(prog.u('uDir'), live.dir);
+      gl.bindVertexArray(vao); gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, verts, n);
+    }
+    const nFall = Math.min(FALL_MAX, Math.round(live.rain * 520 * Math.max(.6, W * H / (1440 * 860))));
+    if (nFall > 0){
+      const f = P.fall; common(f);
+      gl.uniform1f(f.u('uTime'), live.rt); gl.uniform1f(f.u('uSlant'), live.dir * live.wind * .55); gl.uniform1f(f.u('uMode'), live.kind === 'snow' ? 1 : 0);
+      gl.bindVertexArray(fallVAO); gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, nFall);
+    }
+  }
+  return {resize, draw, gl};
+})();
+if (Scene) document.body.classList.add('gl');
+
+function stepLive(dt){
+  const e = reduceMotion ? 1 : Math.min(1, dt * 1.2);
+  for (const k of ['wind', 'dir', 'cover', 'rain', 'over', 'fog']) live[k] += (live[k + 'T'] - live[k]) * e;
+  live.t += dt * (.7 + live.wind * 1.3);
+  live.rt += dt;
+  live.drift += live.dir * (5 + live.wind * 60) * .8 * dt;
+  live.flash *= Math.exp(-dt * 7);
+  if (live.kind === 'storm' && !reduceMotion && performance.now() > live.nextFlash){
+    live.nextFlash = performance.now() + 4000 + Math.random() * 7000;
+    live.flash = .8;
+    setTimeout(() => { live.flash = Math.max(live.flash, .55); }, 160);
+  }
+}
+let lastFrame = 0;
+function frame(now){
+  requestAnimationFrame(frame);
+  if (document.hidden || !Scene) return;
+  const dt = lastFrame ? Math.min(.1, (now - lastFrame) / 1000) : 0;
+  lastFrame = now;
+  stepLive(reduceMotion ? 0 : dt);
+  Scene.draw();
+}
+
+// ---------- weather (Open-Meteo, no key needed) ----------
+async function getJSON(url, ms = 9000){
+  const c = new AbortController(), t = setTimeout(() => c.abort(), ms);
+  try{ const r = await fetch(url, {signal: c.signal}); if (!r.ok) throw new Error(r.status); return await r.json(); }
+  finally{ clearTimeout(t); }
+}
+const WX = code =>
+  code === 0 ? ['Clear', null, 0] : code === 1 ? ['Mostly clear', null, 0] : code === 2 ? ['Partly cloudy', null, 0] : code === 3 ? ['Overcast', null, 0] :
+  code <= 48 ? ['Fog', 'fog', 0] : code <= 55 ? ['Drizzle', 'rain', .3] : code <= 57 ? ['Freezing drizzle', 'rain', .35] :
+  code === 61 ? ['Light rain', 'rain', .45] : code === 63 ? ['Rain', 'rain', .7] : code <= 67 ? ['Heavy rain', 'rain', 1] :
+  code === 71 ? ['Light snow', 'snow', .4] : code === 73 ? ['Snow', 'snow', .7] : code <= 77 ? ['Heavy snow', 'snow', 1] :
+  code === 80 ? ['Showers', 'rain', .5] : code === 81 ? ['Showers', 'rain', .75] : code === 82 ? ['Downpour', 'rain', 1] :
+  code <= 86 ? ['Snow showers', 'snow', .7] : ['Thunderstorm', 'storm', .9];
+let wx = null, wxBusy = false, wxShown = '';
+async function coordsFor(c){
+  if (c.lat != null) return c;
+  try{
+    const j = await getJSON(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(c.name)}&count=5&language=en&format=json`);
+    const r = (j.results || []).find(r => !c.cc || (r.country_code || '').toLowerCase() === c.cc) || (j.results || [])[0];
+    if (r){ c.lat = r.latitude; c.lon = r.longitude; save(); }
+  }catch{}
+  return c;
+}
+async function loadWeather(force = false){
+  if (wxBusy) return;
+  wxBusy = true;
+  try{
+    const c = await coordsFor(home());
+    if (c.lat == null){ wx = null; return; }
+    const key = c.lat.toFixed(2) + ',' + c.lon.toFixed(2);
+    if (!force && wx && wx.key === key && Date.now() - wx.fetched < 30 * MIN) return;
+    try{
+      const cached = JSON.parse(localStorage.getItem('dayline.wx'));
+      if (!force && cached && cached.key === key && Date.now() - cached.fetched < 30 * MIN){ wx = cached; return; }
+    }catch{}
+    const f = 'temperature_2m,weather_code,cloud_cover,wind_speed_10m,wind_direction_10m';
+    const j = await getJSON(`https://api.open-meteo.com/v1/forecast?latitude=${c.lat}&longitude=${c.lon}&current=${f}&hourly=${f}&past_days=1&forecast_days=3&timeformat=unixtime&timezone=GMT`);
+    const h = j.hourly;
+    wx = {key, fetched: Date.now(), t: h.time, code: h.weather_code, cover: h.cloud_cover, wind: h.wind_speed_10m, dir: h.wind_direction_10m, temp: h.temperature_2m,
+      cur: {code: j.current.weather_code, cover: j.current.cloud_cover, wind: j.current.wind_speed_10m, dir: j.current.wind_direction_10m, temp: j.current.temperature_2m}};
+    try{ localStorage.setItem('dayline.wx', JSON.stringify(wx)); }catch{}
+  }catch{ /* offline or blocked: the painting keeps a gentle breeze */ }
+  finally{ wxBusy = false; wxShown = ''; scheduleRender(); }
+}
+function weatherAt(T){
+  if (!wx) return null;
+  if (cursor === null) return wx.cur;
+  const i = Math.round((T / 1000 - wx.t[0]) / 3600);
+  if (i < 0 || i >= wx.t.length) return null;
+  return {code: wx.code[i], cover: wx.cover[i], wind: wx.wind[i], dir: wx.dir[i], temp: wx.temp[i]};
+}
+function applyWeather(T){
+  const w = weatherAt(T);
+  const key = w ? [w.code, w.cover, Math.round(w.wind), w.dir, Math.round(w.temp)].join() : 'none' + !!wx;
+  if (key === wxShown) return;
+  wxShown = key;
+  if (!w){
+    Object.assign(live, {windT: .22, dirT: 1, coverT: .25, rainT: 0, kind: null});
+    live.overT = 0; live.fogT = 0;
+    $('#wx').textContent = wx ? 'No forecast that far out' : '';
+  } else {
+    const [label, kind, amt] = WX(w.code);
+    let dx = -Math.sin(w.dir * Math.PI / 180);   // wind blows away from the side it comes from
+    if (Math.abs(dx) < .35) dx = dx < 0 ? -.35 : .35;
+    const cover = kind === 'fog' ? .9 : kind ? Math.max(.7, w.cover / 100) : w.cover / 100;
+    Object.assign(live, {windT: Math.max(.06, Math.min(1, w.wind / 45)), dirT: dx, coverT: cover, rainT: kind && kind !== 'fog' ? amt : 0, kind});
+    live.overT = kind === 'storm' ? 1 : Math.max(0, (cover - .55) / .45);
+    live.fogT = kind === 'fog' ? 1 : 0;
+    const useF = home().cc === 'us';
+    const temp = useF ? Math.round(w.temp * 9 / 5 + 32) + '°F' : Math.round(w.temp) + '°C';
+    const wind = useF ? Math.round(w.wind / 1.609) + ' mph' : Math.round(w.wind) + ' km/h';
+    $('#wx').textContent = `${temp} · ${label} · Wind ${wind}`;
+  }
+  sunVeil = Math.min(.85, Math.max(0, (live.coverT - .6) / .35));
+  lastSky = -1;
+}
+
+// ---------- where am I ----------
+const browserTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+async function ipLookup(){
+  try{
+    const j = await getJSON('https://ipwho.is/');
+    if (j.success !== false && j.city) return {name: j.city, country: j.country, cc: (j.country_code || '').toLowerCase(), lat: j.latitude, lon: j.longitude, tz: j.timezone?.id};
+  }catch{}
+  try{
+    const j = await getJSON('https://ipapi.co/json/');
+    if (j.city) return {name: j.city, country: j.country_name, cc: (j.country_code || '').toLowerCase(), lat: j.latitude, lon: j.longitude, tz: j.timezone};
+  }catch{}
+  return null;
+}
+async function gpsLookup(){
+  const pos = await new Promise((res, rej) => navigator.geolocation.getCurrentPosition(res, rej, {timeout: 12000, maximumAge: 10 * MIN}));
+  const lat = pos.coords.latitude, lon = pos.coords.longitude;
+  let name = '', country = '', cc = '';
+  try{
+    const j = await getJSON(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=en`);
+    name = j.city || j.locality || j.principalSubdivision || ''; country = j.countryName || ''; cc = (j.countryCode || '').toLowerCase();
+  }catch{}
+  return {name: name || 'My location', country, cc, lat, lon, tz: browserTz};
+}
+function setMyPlace(p, how){
+  if (!p.tz || !validTz(p.tz)) p.tz = browserTz;
+  const now = Date.now();
+  let c = state.cities.find(x => norm(x.name) === norm(p.name) && tzOffset(x.tz, now) === tzOffset(p.tz, now));
+  state.cities.forEach(x => delete x.me);
+  if (!c){ c = {id: uid(), name: p.name, country: p.country || '', cc: p.cc || '', tz: p.tz}; state.cities.unshift(c); }
+  if (p.lat != null){ c.lat = p.lat; c.lon = p.lon; }
+  c.me = true;
+  state.homeId = c.id; state.located = true;
+  save(); lastSky = -1; buildRows(); loadWeather(true);
+  toast(how === 'ip' ? `Found you near ${c.name} from your network. Tap Locate me for a precise spot.` : `You're in ${c.name}. It's home now.`);
+}
+let toastT;
+function toast(msg){
+  const t = $('#toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), 4200);
+}
+async function ipLocate(){
+  const p = await ipLookup();
+  if (p && p.name) setMyPlace(p, 'ip');
+  else { state.located = true; save(); loadWeather(); }
+}
+$('#locBtn').addEventListener('click', async () => {
+  const b = $('#locBtn');
+  if (b.classList.contains('busy')) return;
+  b.classList.add('busy');
+  try{
+    let p = null, how = 'gps';
+    if (navigator.geolocation){ try{ p = await gpsLookup(); }catch{} }
+    if (!p){ p = await ipLookup(); how = 'ip'; }
+    if (p) setMyPlace(p, how);
+    else toast('Couldn’t find your location. Add your city with Add place.');
+  } finally { b.classList.remove('busy'); }
+});
+
+let heroT, heroSized = false;
+const heroRO = new ResizeObserver(() => { clearTimeout(heroT); heroT = setTimeout(() => { Scene?.resize(); heroSized = true; }, heroSized ? 120 : 0); });
+
+// ---------- boot ----------
+heroRO.observe($('#hero'));
+requestAnimationFrame(frame);
+if (!state.located) ipLocate(); else loadWeather();
+setInterval(() => loadWeather(), 15 * MIN);
+setFmt(state.h12);
+buildRows();
+setInterval(() => { if (!drag && !anim) render(); }, 1000);
+addEventListener('resize', scheduleRender);
+document.fonts?.ready.then(render);
+</script>
+</body>
+</html>

@@ -25,9 +25,10 @@ The whole thing is one HTML file with no build step and no dependencies.
 - **Your places, your order.** Add any city in the world, then remove, reorder, rename, or set one as home.
 - **Knows where you are.** Your city is detected from your IP on the first visit. *Locate me* uses your device's location for a precise fix.
 - **A living background.** The scene is painted on the GPU in brush strokes: grass and flowers sway in the wind, and the weather changes with the forecast as you scrub through the next three days.
+- **A panel you can place.** On desktop, drag the places panel by its top bar to anywhere on screen (or move it with the arrow keys); double-click the bar to dock it again. Its spot is remembered.
 - **Fits one screen.** No page scroll on desktop or phone; only the list of places scrolls if you add many.
 - **Keyboard friendly.** `←` `→` move 15 minutes, `N` returns to now.
-- **Remembers you.** Places and preferences are kept in your browser's local storage. No account and no tracking.
+- **Remembers you.** Your places, their order, home, clock format, zoom, location and panel position are kept in your browser's local storage, so the page opens the way you left it. No account and no tracking.
 - **Respects your settings.** Motion stops when the system asks for reduced motion.
 
 ## How it works
